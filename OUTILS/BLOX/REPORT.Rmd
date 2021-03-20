@@ -1,0 +1,252 @@
+---
+title: A N A L Y T I C S <br>[FE Uprating Factors]
+author: Bogdan Micu
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    toc_depth: 3
+mainfont: Calibri
+---
+
+<!-- ------------- START LAYOUT SETUP ------------- -->
+
+<!-- LOGO -->
+
+<script>
+  $(document).ready(function() {
+    $('#TOC').parent().prepend('<div id=\"nav_logo\"><img src=\"https://ec.europa.eu/eurostat/cache/digpub/european_economy/vis/chapter21_1/images/logoestat.png\"></div>');
+  });
+</script>
+
+<!-- STYLE -->
+
+<style>
+#nav_logo {
+  width: 100%;
+  margin-top: 20px;
+}
+#TOC {
+  background: url("https://ec.europa.eu/eurostat/documents/10186/8486739/experimental-blue.png");
+  background-size: contain;
+  padding-top: 77px !important;
+  background-repeat: no-repeat;
+}
+
+h1.title {
+  font-size: 27px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align:center;
+}
+
+body {
+  font-size: 17px;
+  font-family: Calibri;
+  color: #273749;
+  text-align:justify;
+}
+
+a, a:hover {
+    color: cornflowerblue;
+}
+
+.nav>li>a {
+  position: relative;
+  padding: 3px 9px;
+}
+
+div.tocify {
+  max-width: 17%;
+}
+
+</style>
+
+```{r SETUP, message=FALSE, warning=FALSE, include=FALSE}
+
+knitr::opts_chunk$set(dpi=99,
+                      out.width="100%",
+                      message=FALSE,
+                      warning=FALSE,
+                      echo=FALSE) # dev=c("png","svg"), fig.ext="png"
+
+```
+<!-- ------------- END LAYOUT SETUP ------------- -->
+
+
+```{r echo=FALSE}
+
+download.file(url="https://ec.europa.eu/eurostat/documents/7894008/9036137/IncomeEquality120.png",
+              destfile=here("OUTILS","MIX","logo.png"),
+              mode="wb")
+
+htmltools::img(src=knitr::image_uri(here("OUTILS","MIX","logo.png")), 
+               alt='logo', 
+               style='position:absolute; top:0; right:0; padding:9px; height:111px; width:111px')
+
+```
+
+```{r Data & Funs, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+
+source(here("OUTILS","FUNS","Fviz_model.R"))
+load(here("DATA","item_list.Rdata"))
+load(here("DATA","predictor_list.Rdata"))
+load(here("DATA","uf_em.Rdata"))
+
+```
+
+
+```{r , echo=FALSE, message=FALSE}
+
+f.block.indicator=function (.v) {
+  paste0("\n### ",
+         {if (str_detect(.v,"Generic")) "<i>[Generic<br>Predictors]</i>"
+           else paste0(gsub(" @ ","<br><span style=\'font-size:9pt\'>",.v),
+                             "</span>")},
+         " {.tabset .tabset-pills}\n",
+         "\n#### FORECASTS {.tabset .tabset-dropdown}\n",
+         "\n##### All Models\n",
+         "```{r}\n
+         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE)\n
+         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE)\n
+         ```\n",
+         "\n<p>\n***\n<p>\n",
+         {if (str_detect(.v,"Generic")) ""
+           else 
+           paste0("\n##### Univariate Linear\n",
+         "```{r}\n
+         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.lm1\")\n
+         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.lm1\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n",
+         "\n##### Univariate Linear w/ ARIMA errors\n",
+         "```{r}\n
+         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.ar1\")\n
+         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.ar1\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n")},
+         {if (str_detect(.v,"Generic") |
+              !.v %in% gsub("`","",generic.predictors))
+           paste0("\n##### Multivariate Linear\n",
+         "```{r}\n
+         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.lmx\")\n
+         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.lmx\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n",
+         "\n##### Multivariate Linear w/ ARIMA errors\n",
+         "```{r}\n
+         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.arx\")\n
+         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.arx\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n")
+           else ""},
+         {if (str_detect(.v,"Generic")) ""
+           else 
+           paste0("\n#### SILC vs<br>Uprating Factor {.tabset .tabset-pills}\n",
+         "\n##### 2008-2018\n",
+         "```{r}\n
+         F.viz.model(.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"index\")\n
+         F.viz.model(.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n",
+         "\n##### 2008-2012\n",
+         "```{r}\n
+         F.viz.model(.data=filter(data.x,YEAR %in% 2008:2012),.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"index\")\n
+         F.viz.model(.data=filter(data.x,YEAR %in% 2008:2012),.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=filter(data.x,YEAR %in% 2008:2012),.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n")},
+         "\n#### Modeling Performance :<br>Model Fit {.tabset .tabset-dropdown}\n",
+         {if (str_detect(.v,"Generic")) ""
+           else 
+           paste0("\n##### Univariate Linear\n",
+         "```{r}\n
+         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.lm1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.lm1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n",
+         "\n##### Univariate Linear w/ ARIMA errors\n",
+         "```{r}\n
+         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.ar1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.ar1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n")},
+         {if (str_detect(.v,"Generic") |
+              !.v %in% gsub("`","",generic.predictors))
+           paste0("\n##### Multivariate Linear\n",
+         "```{r}\n
+         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.lmx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.lmx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n",
+         "\n##### Multivariate Linear w/ ARIMA errors\n",
+         "```{r}\n
+         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.arx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.arx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n")
+           else ""},
+         "\n#### Modeling Performance :<br>Forecast {.tabset .tabset-dropdown}\n",
+         {if (str_detect(.v,"Generic")) ""
+           else 
+           paste0("\n##### Univariate Linear\n",
+         "```{r}\n
+         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.lm1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.lm1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n",
+         "\n##### Univariate Linear w/ ARIMA errors\n",
+         "```{r}\n
+         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.ar1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.ar1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n")},
+         {if (str_detect(.v,"Generic") |
+              !.v %in% gsub("`","",generic.predictors))
+           paste0("\n##### Multivariate Linear\n",
+         "```{r}\n
+         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.lmx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.lmx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n",
+         "\n##### Multivariate Linear w/ ARIMA errors\n",
+         "```{r}\n
+         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.arx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
+         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.arx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
+         ```\n",
+         "\n<p>\n***\n<p>\n")
+           else ""})
+}
+
+out=NULL
+for (.s in unique(names(predictor.list))) {
+  out=c(out,
+        paste0("\n# `r '",.s,"'` {.tabset .tabset-pills}\n",
+               "\n## EUROMOD\n",
+               {if (.s %in% unique(UF.EM$SILC.INDICATOR))
+                 paste0("```{r, fig.width=11, fig.height=9}\n",
+               "F.viz.EUROMOD(.s_=\"",.s,"\",.v_=\"index\")\n
+               F.viz.EUROMOD(.s_=\"",.s,"\",.v_=\"yoy\")\n
+               F.viz.EUROMOD(.s_=\"",.s,"\",.v_=\"cor\")\n```\n")
+               else "NO EUROMOD Uprating Factor\n\n"},
+               "\n<p>\n***\n<p>\n",
+               "\n## Alternative Uprating Factors {.tabset .tabset-pills}\n",
+               "\n### FORECASTS\n",
+               "```{r}\n
+               F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",show.var=FALSE)\n
+               F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",show.var=FALSE)\n
+               ```\n",
+               "\n<p>\n***\n<p>\n"),
+        knitr::knit_expand(text=paste(lapply(
+          c("[Generic Predictors]",
+            predictor.list[which(names(predictor.list)==.s)]),
+          f.block.indicator),collapse="\n\n")))
+}
+
+```
+`r paste(knitr::knit(text=out), collapse='\n')`
+
+
+
