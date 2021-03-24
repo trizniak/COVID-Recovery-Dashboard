@@ -1,47 +1,33 @@
 ---
-title: A N A L Y T I C S <br>[FE Uprating Factors]
-author: Bogdan Micu
+title: European Statistical Recovery Dashboard
 output:
   html_document:
     theme: flatly
-    toc: true
-    toc_float: true
-    toc_depth: 3
+    toc: false
 mainfont: Calibri
 ---
 
 <!-- ------------- START LAYOUT SETUP ------------- -->
 
-<!-- LOGO -->
-
-<script>
-  $(document).ready(function() {
-    $('#TOC').parent().prepend('<div id=\"nav_logo\"><img src=\"https://ec.europa.eu/eurostat/cache/digpub/european_economy/vis/chapter21_1/images/logoestat.png\"></div>');
-  });
-</script>
-
 <!-- STYLE -->
 
 <style>
-#nav_logo {
-  width: 100%;
-  margin-top: 20px;
-}
-#TOC {
-  background: url("https://ec.europa.eu/eurostat/documents/10186/8486739/experimental-blue.png");
-  background-size: contain;
-  padding-top: 77px !important;
-  background-repeat: no-repeat;
+
+.main-container {
+  max-width: 1700px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 h1.title {
-  font-size: 27px;
+  font-size: 0px;
   font-weight: bold;
-  color: DarkRed;
+  color: transparent;
   text-align:center;
 }
 
 body {
+  width: 100%;
   font-size: 17px;
   font-family: Calibri;
   color: #273749;
@@ -52,201 +38,395 @@ a, a:hover {
     color: cornflowerblue;
 }
 
-.nav>li>a {
-  position: relative;
-  padding: 3px 9px;
-}
-
-div.tocify {
-  max-width: 17%;
-}
+table.display td { white-space: nowrap; }
 
 </style>
 
 ```{r SETUP, message=FALSE, warning=FALSE, include=FALSE}
 
-knitr::opts_chunk$set(dpi=99,
+knitr::opts_chunk$set(dpi=69,
                       out.width="100%",
                       message=FALSE,
                       warning=FALSE,
-                      echo=FALSE) # dev=c("png","svg"), fig.ext="png"
+                      echo=FALSE)
 
 ```
 <!-- ------------- END LAYOUT SETUP ------------- -->
 
+```{r VIZ, echo=FALSE, message=FALSE, warning=FALSE}
 
-```{r echo=FALSE}
+# ---- VIZ : Dashboard ----
+# GDP,Unemployment,Economic Sentiment Indicator,Inflation
+# Industrial Production,Services Turnover,Retail Trade,Tourism Nights
 
-download.file(url="https://ec.europa.eu/eurostat/documents/7894008/9036137/IncomeEquality120.png",
-              destfile=here("OUTILS","MIX","logo.png"),
-              mode="wb")
+# DATA ----
+load(here("DATA","DATA.Rdata"))
 
-htmltools::img(src=knitr::image_uri(here("OUTILS","MIX","logo.png")), 
-               alt='logo', 
-               style='position:absolute; top:0; right:0; padding:9px; height:111px; width:111px')
+
+# AUX PARAM ----
+
+indicator.label = c(GDP="GDP",
+                    UNE="Unemployment",
+                    CPI="Inflation",
+                    ESI="Economic Sentiment Indicator",
+                    IND="Industrial Production",
+                    SRV="Services Turnover",
+                    RET="Retail Trade",
+                    TOU="Tourism Nights")
+
+indicator.unit = c(GDP="Billion EUR",
+                   UNE="% of Active population",
+                   CPI=NULL,
+                   ESI=NULL,
+                   IND="Index, 2015=100",
+                   SRV="Index, 2015=100",
+                   RET="Index, 2015=100",
+                   TOU="Thousand persons")
+
+indicator.tooltip = c(
+  GDP="<b>What is the indicator about?</b><br>
+
+  Gross Domestic Product (GDP) is the most-used summary indicator of economic activity. It can be measured in terms of output approach (gross value added and net taxes on products), expenditure approach (final consumption expenditure, gross capital formation and net exports) or income approach (compensation of employees, gross operating surplus and mixed income and net taxes on production and imports), using and integrating multiple sources of data.<p>
+<b>What can this indicator say about the recovery?</b><br>
+
+In relation to COVID-19, GDP can help to monitor the severity of economic impact and recovery from the pandemic. Normally, during an economic recovery, GDP grows, incomes rise, and unemployment falls as the economy rebounds.",
+  UNE=NULL,
+  CPI="<b>What is the indicator about?</b><br>
+The annual inflation rate represents the change in prices between the current month and the same month of the previous year of all goods and services (with some exceptions) purchased by households for final consumption on the economic territory of the country.<p>
+<b>What can this indicator say about the recovery?</b><br>
+
+During the outbreak of the COVID-19 pandemic and due to travel restrictions and lockdowns, consumer expenditure has been strongly negatively affected. As a result, inflation was subdued, or even became negative in the second half of 2020.
+
+A steadily increasing pattern of inflation in the euro area could be a good indication of a return of demand and thus economic recovery, particularly in combination with other economic indicators. The various large government stimulus packages across the EU may accelerate inflation even more.",
+  ESI=NULL,
+  IND=NULL,
+  SRV=NULL,
+  RET=NULL,
+  TOU=NULL)
+
+# ---- VIZ ----
+
+# * COVID ----
+  
+  vizdata.covid = data.CRD %>%
+    filter(COUNTRY=="EU",
+           section=="COVID")
+  
+  viz.covid = vizdata.covid %>%
+    ggplot(aes(x=factor(100*YEAR+WEEK),
+               y=val,
+               group=1)) +
+    geom_line(color="darkred") +
+    geom_point_interactive(aes(tooltip=paste0("W ",sprintf("%2.f",WEEK),
+                                              ", ",YEAR,"<br>",
+                                              format(x=val,big.mark=" "),
+                                              " ",INDICATOR),
+                               data_id=paste0(YEAR,"Q",
+                                              pmin(4,ceiling(WEEK/13)))),
+                           color="darkred") +
+    theme(axis.text=element_text(size=6),
+          plot.title=element_markdown(family="Calibri",
+                                      color="darkred"),
+          plot.subtitle=element_markdown(family="Calibri",
+                                         face="italic",
+                                         size=9,
+                                         color="darkred")) +
+    scale_x_discrete(labels=function (x) {
+      if_else(as.numeric(x)%%100==1,
+              paste0("Week 01\n",as.numeric(x)%/%100),
+              if_else((as.numeric(x)%%100)%%13==0 &
+                        as.numeric(x)%%100<50,
+                      paste0("Week ",as.character(as.numeric(x)%%100)),""))}) +
+    scale_y_continuous(labels=scales::number_format(big.mark=" ")) +
+    labs(title="COVID",
+         subtitle=vizdata.covid %>%
+           filter(100*YEAR+WEEK==max(100*YEAR+WEEK)) %>%
+           mutate(WY=paste0("Week ",WEEK,", ",YEAR)) %>%
+           select(WY,INDICATOR,val) %>%
+           pivot_wider(names_from="INDICATOR",
+                       values_from="val") %>%
+           mutate(text=paste0(!!rlang::sym(colnames(.)[1])," : ",
+                              !!rlang::sym(colnames(.)[2])," ",colnames(.)[2],
+                              " & ",!!rlang::sym(colnames(.)[3])," ",colnames(.)[3])) %>%
+           pull() %>%
+           unlist(),
+         x=NULL,
+         y=NULL) +
+    facet_wrap(facets=vars(paste0("Weekly ",INDICATOR)),
+               ncol=1,
+               scales="free_y")
+  
+  # * ESTAT ----
+  
+  F.viz.estat = function (.indicator) {
+    
+    f.axis.lab = function (x) {
+      paste0({if (max(as.numeric(x)%%100,na.rm=TRUE)==4)
+        paste0("Q",as.numeric(x)%%100)
+        else if_else((as.numeric(x)%%100)%%3==1,
+                     month.abb[as.numeric(x)%%100],"")
+      },
+      if_else(as.numeric(x)%%100==1,
+              paste0("\n",as.numeric(x)%/%100),""))}
+    
+    data.viz = data.CRD %>%
+      filter(COUNTRY=="EU",
+             INDICATOR==.indicator,
+             YEAR>=2019)
+    data.viz = data.viz %>%
+      mutate(ref=subset(.,
+                        YEAR==2020 &
+                          pmax(QUARTER,MONTH,WEEK)==1,
+                        select=val) %>%
+               unlist(),
+             val.index=ifelse(100*YEAR+pmax(QUARTER,MONTH,WEEK)>202001,
+                              100*(val/ref-1),NA),
+             t.index=ifelse(100*YEAR+pmax(QUARTER,MONTH,WEEK)>202001,
+                            paste0(ifelse(val.index<0 |
+                                            (val.index>0 &
+                                               INDICATOR=="UNE"),
+                                          "<span style=\'color:red\'>",""),
+                                   sprintf("%+.1f%%",val.index),
+                                   ifelse(val.index<0 |
+                                            (val.index>0 &
+                                               INDICATOR=="UNE"),
+                                          "</span>",""),
+                                   " vs. ",
+                                   case_when(freq=="Q"~"Q1 ",
+                                             freq=="M"~"Jan ",
+                                             freq=="W"~"Week 1 "),
+                                   "2020"),
+                            ""),
+             tooltip=paste0(case_when(freq=="Q"~paste0("Q",QUARTER),
+                                      freq=="M"~ifelse(MONTH>0,
+                                                       month.abb[MONTH],
+                                                       ""),
+                                      freq=="W"~paste0("W ",
+                                                       sprintf("%2.f",WEEK)),
+                                      TRUE~""),
+                            " ",YEAR,
+                            " : ",
+                            sprintf(if_else(max(val)>50,
+                                            "%.0f","%.1f"),
+                                    val),
+                            ifelse(100*YEAR+pmax(QUARTER,MONTH,WEEK)>202001,
+                                   {if (!INDICATOR %in% c("CPI"))
+                                     paste0("<br> (",
+                                            t.index,")")
+                                     else ""},
+                                   "")))
+    
+    
+    
+    data.viz %>%
+      ggplot(aes(x=factor(100*YEAR+
+                            case_when(freq=="Q"~QUARTER,
+                                      freq=="M"~MONTH,
+                                      freq=="W"~WEEK,
+                                      TRUE~0)),
+                 y=val,
+                 group=1)) +
+      geom_line() +
+      geom_point_interactive(aes(tooltip=tooltip,
+                                 data_id=paste0(YEAR,"Q",
+                                                case_when(freq=="Q"~QUARTER,
+                                                          freq=="M"~ceiling(MONTH/3),
+                                                          freq=="W"~pmin(4,ceiling(WEEK/13)),
+                                                          TRUE~0))),
+                             color="slategray") +
+      theme_minimal(base_family="Calibri") +
+      theme(text=element_text(family="Calibri",
+                              color=my.color),
+            axis.text=element_text(size=6),
+            plot.title=element_text_interactive(tooltip=
+                                                  {if (is.na(indicator.tooltip[.indicator])) NULL
+                                                    else str_wrap(indicator.tooltip[.indicator],
+                                                                  width=99)}),
+            plot.title.position="plot",
+            plot.subtitle=element_markdown(family="Calibri",
+                                           face="italic",
+                                           size=9)) +
+      scale_x_discrete(labels=f.axis.lab) +
+      scale_y_continuous(labels=scales::number_format(big.mark=" ")) +
+      labs(title=indicator.label[.indicator],
+           subtitle=data.viz %>%
+             filter(100*YEAR+
+                      case_when(freq=="Q"~QUARTER,
+                                freq=="M"~MONTH,
+                                freq=="W"~WEEK,
+                                TRUE~0)==
+                      max(100*YEAR+
+                            case_when(freq=="Q"~QUARTER,
+                                      freq=="M"~MONTH,
+                                      freq=="W"~WEEK,
+                                      TRUE~0))) %>%
+             mutate(subtitle=paste0(case_when(freq=="Q"~paste0("Q",QUARTER),
+                                              freq=="M"~ifelse(MONTH>0,
+                                                               month.abb[MONTH],
+                                                               ""),
+                                              freq=="W"~paste0("W ",
+                                                               sprintf("%2.f",WEEK)),
+                                              TRUE~""),
+                                    " ",YEAR,
+                                    " : ",
+                                    sprintf(if_else(max(val)>50,
+                                                    "%.0f","%.1f"),
+                                            val),
+                                    {if (.indicator !="CPI")
+                                      paste0(" (",t.index,")")
+                                      else ""})) %>%
+             pull(),
+           x=NULL,
+           y={if (is.na(indicator.unit[.indicator])) NULL
+             else indicator.unit[.indicator]})
+  }
+  
+  viz.CRD = wrap_elements(viz.covid) +
+    (wrap_elements(F.viz.estat("GDP") +
+                     F.viz.estat("UNE") +
+                     F.viz.estat("ESI") +
+                     F.viz.estat("CPI") +
+                     plot_layout(nrow=1)) /
+       wrap_elements(F.viz.estat("IND") +
+                       F.viz.estat("RET") +
+                       F.viz.estat("SRV") +
+                       F.viz.estat("TOU") +
+                       plot_layout(nrow=1))) +
+    plot_layout(widths=c(1.1,3.9)) +
+    plot_annotation(title=paste0("<img src='",
+                                 "https://ec.europa.eu/eurostat/cache/digpub",
+                                 "/european_economy/vis/chapter21_1",
+                                 "/images/logoestat.png' width='99' />",
+                                 "European Statistical Recovery Dashboard : ",
+                                 "EU27 <img src='https://europa.eu/",
+                                 "european-union/sites/europaeu/files/",
+                                 "docs/body/flag_yellow_high.jpg'",
+                                 " height='17' />"),
+                    theme=theme(title=element_markdown(size=26)))
+  
+  
+  girafe(ggobj=viz.CRD,
+         options=list(opts_tooltip(css="font-size:13px;font-family:Calibri;background-color:white;color:#273749;;padding:9px;border-radius:4px"),
+                      opts_sizing(rescale=TRUE),
+                      opts_zoom(min=0.1,max=3),
+                      opts_toolbar(pngname="European Statistical Recovery Dashboard"),
+                      opts_hover_inv(css="opacity:0;"),
+                      opts_hover(css="stroke-width:2;"),
+                      opts_selection(css="stroke-width:6px;",
+                                     type="single",
+                                     only_shiny=FALSE,
+                                     selected=character(0))),
+         fonts=list(sans="Calibri"),
+         width_svg=13,
+         height_svg=6)
 
 ```
 
-```{r Data & Funs, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+<p>
+****
+<p>
 
-source(here("OUTILS","FUNS","Fviz_model.R"))
-load(here("DATA","item_list.Rdata"))
-load(here("DATA","predictor_list.Rdata"))
-load(here("DATA","uf_em.Rdata"))
+```{r Data sources, echo=FALSE, message=FALSE, warning=FALSE}
 
-```
-
-
-```{r , echo=FALSE, message=FALSE}
-
-f.block.indicator=function (.v) {
-  paste0("\n### ",
-         {if (str_detect(.v,"Generic")) "<i>[Generic<br>Predictors]</i>"
-           else paste0(gsub(" @ ","<br><span style=\'font-size:9pt\'>",.v),
-                             "</span>")},
-         " {.tabset .tabset-pills}\n",
-         "\n#### FORECASTS {.tabset .tabset-dropdown}\n",
-         "\n##### All Models\n",
-         "```{r}\n
-         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE)\n
-         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE)\n
-         ```\n",
-         "\n<p>\n***\n<p>\n",
-         {if (str_detect(.v,"Generic")) ""
-           else 
-           paste0("\n##### Univariate Linear\n",
-         "```{r}\n
-         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.lm1\")\n
-         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.lm1\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n",
-         "\n##### Univariate Linear w/ ARIMA errors\n",
-         "```{r}\n
-         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.ar1\")\n
-         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.ar1\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n")},
-         {if (str_detect(.v,"Generic") |
-              !.v %in% gsub("`","",generic.predictors))
-           paste0("\n##### Multivariate Linear\n",
-         "```{r}\n
-         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.lmx\")\n
-         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.lmx\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n",
-         "\n##### Multivariate Linear w/ ARIMA errors\n",
-         "```{r}\n
-         F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.arx\")\n
-         F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",.var=\"",.v,"\",show.var=FALSE,.model=\"m.arx\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n")
-           else ""},
-         {if (str_detect(.v,"Generic")) ""
-           else 
-           paste0("\n#### SILC vs<br>Uprating Factor {.tabset .tabset-pills}\n",
-         "\n##### 2008-2018\n",
-         "```{r}\n
-         F.viz.model(.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"index\")\n
-         F.viz.model(.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n",
-         "\n##### 2008-2012\n",
-         "```{r}\n
-         F.viz.model(.data=filter(data.x,YEAR %in% 2008:2012),.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"index\")\n
-         F.viz.model(.data=filter(data.x,YEAR %in% 2008:2012),.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=filter(data.x,YEAR %in% 2008:2012),.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n")},
-         "\n#### Modeling Performance :<br>Model Fit {.tabset .tabset-dropdown}\n",
-         {if (str_detect(.v,"Generic")) ""
-           else 
-           paste0("\n##### Univariate Linear\n",
-         "```{r}\n
-         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.lm1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.lm1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n",
-         "\n##### Univariate Linear w/ ARIMA errors\n",
-         "```{r}\n
-         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.ar1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.ar1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n")},
-         {if (str_detect(.v,"Generic") |
-              !.v %in% gsub("`","",generic.predictors))
-           paste0("\n##### Multivariate Linear\n",
-         "```{r}\n
-         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.lmx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.lmx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n",
-         "\n##### Multivariate Linear w/ ARIMA errors\n",
-         "```{r}\n
-         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.arx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=data.model,.source=\"EST\",.model=\"m.arx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n")
-           else ""},
-         "\n#### Modeling Performance :<br>Forecast {.tabset .tabset-dropdown}\n",
-         {if (str_detect(.v,"Generic")) ""
-           else 
-           paste0("\n##### Univariate Linear\n",
-         "```{r}\n
-         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.lm1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.lm1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n",
-         "\n##### Univariate Linear w/ ARIMA errors\n",
-         "```{r}\n
-         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.ar1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.ar1\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n")},
-         {if (str_detect(.v,"Generic") |
-              !.v %in% gsub("`","",generic.predictors))
-           paste0("\n##### Multivariate Linear\n",
-         "```{r}\n
-         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.lmx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.lmx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n",
-         "\n##### Multivariate Linear w/ ARIMA errors\n",
-         "```{r}\n
-         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.arx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"yoy\")\n
-         F.viz.model(.data=data.model,.source=\"FXT.2\",.model=\"m.arx\",.silc=\"",.s,"\",.var=\"",.v,"\",.viz=\"cor\")\n
-         ```\n",
-         "\n<p>\n***\n<p>\n")
-           else ""})
-}
-
-out=NULL
-for (.s in unique(names(predictor.list))) {
-  out=c(out,
-        paste0("\n# `r '",.s,"'` {.tabset .tabset-pills}\n",
-               "\n## EUROMOD\n",
-               {if (.s %in% unique(UF.EM$SILC.INDICATOR))
-                 paste0("```{r, fig.width=11, fig.height=9}\n",
-               "F.viz.EUROMOD(.s_=\"",.s,"\",.v_=\"index\")\n
-               F.viz.EUROMOD(.s_=\"",.s,"\",.v_=\"yoy\")\n
-               F.viz.EUROMOD(.s_=\"",.s,"\",.v_=\"cor\")\n```\n")
-               else "NO EUROMOD Uprating Factor\n\n"},
-               "\n<p>\n***\n<p>\n",
-               "\n## Alternative Uprating Factors {.tabset .tabset-pills}\n",
-               "\n### FORECASTS\n",
-               "```{r}\n
-               F.viz.model(.viz=\"index\",.fxt=TRUE,.silc=\"",.s,"\",show.var=FALSE)\n
-               F.viz.model(.viz=\"yoy\",.fxt=TRUE,.silc=\"",.s,"\",show.var=FALSE)\n
-               ```\n",
-               "\n<p>\n***\n<p>\n"),
-        knitr::knit_expand(text=paste(lapply(
-          c("[Generic Predictors]",
-            predictor.list[which(names(predictor.list)==.s)]),
-          f.block.indicator),collapse="\n\n")))
-}
+data.CRD %>%
+  group_by(ifelse(is.na(indicator.label[INDICATOR]),
+                  section,
+                  indicator.label[INDICATOR]),
+           dataset) %>%
+  summarize() %>%
+  rename(Indicator=1,
+         Source=2) %>%
+  kableExtra::kable(format="html",
+                    escape=FALSE,
+                    caption="Data sources") %>%
+  kableExtra::kable_styling(bootstrap_options=c("striped","hover","condensed"),
+                full_width=FALSE,
+                fixed_thead=FALSE,
+                position="center")
 
 ```
-`r paste(knitr::knit(text=out), collapse='\n')`
 
+<p>
+****
+<p>
 
+<div style = "width:69%; height:auto; margin: auto;">
+```{r Data file, echo=FALSE, message=FALSE, warning=FALSE}
 
+data.tab = data.CRD %>%
+                filter(YEAR>=2019) %>%
+                mutate(INDICATOR=ifelse(section=="COVID",
+                                        paste0("COVID ",INDICATOR),
+                                        indicator.label[INDICATOR])) %>%
+                relocate(INDICATOR) %>%
+                group_by(INDICATOR,
+                         COUNTRY) %>%
+                mutate(first=dense_rank(-(100*YEAR+
+                                            case_when(freq=="Q"~QUARTER,
+                                                      freq=="M"~MONTH,
+                                                      freq=="W"~WEEK,
+                                                      TRUE~0)))==1 &
+                         COUNTRY=="EU") %>%
+                arrange(desc(first)) %>%
+                ungroup() %>%
+                mutate(Period=case_when(freq=="Q"~paste0("Q",QUARTER),
+                                      freq=="M"~ifelse(MONTH>0,
+                                                       month.abb[as.numeric(MONTH)],
+                                                       ""),
+                                      freq=="W"~paste0("W ",
+                                                       sprintf("%02.f",WEEK)),
+                                      TRUE~"")) %>%
+                relocate(Period,
+                         .after=YEAR) %>%
+                mutate(across(c("INDICATOR",
+                                "COUNTRY",
+                                "YEAR"),
+                              factor),
+                       Period=factor(Period,
+                                     levels=c("- Quarter -",
+                                              paste0("Q",1:4),
+                                              "- Month -",
+                                              month.abb,
+                                              "- Week -",
+                                              paste0("W ",
+                                                     sprintf("%02.f",seq(53)))))) %>%
+                select(-c(dataset,
+                          section,
+                          QUARTER,
+                          MONTH,
+                          WEEK,
+                          first))
+
+DT::datatable(data.tab,
+              class="display",
+              filter="top",
+              extensions=c('Buttons'),
+              rownames=FALSE,
+              caption="Dashboard Data",
+              options=list(dom='Brtip',
+                           buttons=list('copy',
+                                        list(extend='collection',
+                                             buttons=c('csv','excel'),
+                                             text='Download selection')),
+                           pageLength=10,
+                           autoWidth=TRUE,
+                           scrollX=FALSE,
+                           scrollY="399px",
+                           scrollCollapse=TRUE,
+                           paging=TRUE,
+                           searchable=FALSE,
+                           columnDefs=list(list(visible=FALSE,
+                                                targets=c(4,5,7)),
+                                           list(width='333px',
+                                                targets=c(1)),
+                                           list(width='66px',
+                                                targets=c(5))),
+                             initComplete=htmlwidgets::JS(
+                               "function(settings, json) {",
+                               paste0("$(this.api().table().container()).css({'font-size': '9pt'});"),
+                               "}"),
+                           rowCallback=htmlwidgets::JS("function(r,d) {$(r).attr('height', '3px')}")),
+              escape=FALSE)
+
+```
+</div>
