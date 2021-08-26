@@ -4,6 +4,7 @@
 
 # Session Data files
 .RData
+.Rdata
 
 # User-specific files
 .Ruserdata
@@ -37,3 +38,8 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Folders
+DATA/
+OUTPUT/
+T E M P/
