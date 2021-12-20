@@ -65,6 +65,8 @@ load(here("DATA","DATA.Rdata"))
 
 # AUX PARAM ----
 
+color.potential="orange"
+
 indicator.label = c(GDP="GDP",
                     UNE="Unemployment",
                     CPI="Inflation",
@@ -82,6 +84,17 @@ indicator.unit = c(GDP="Billion EUR",
                    SRV="Index, 2015=100",
                    RET="Index, 2015=100",
                    TOU="Thousand persons")
+
+indicator.freq = data.CRD %>%
+  group_by(INDICATOR,
+           freq) %>%
+  summarize() %>%
+  pull(name=INDICATOR)
+
+period.variable = c(W="WEEK",
+                    M="MONTH",
+                    Q="QUARTER",
+                    Y="YEAR")
 
 indicator.tooltip = c(
   GDP="<b>What is the indicator about?</b><br>
@@ -162,6 +175,18 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
   
   F.viz.estat = function (.indicator) {
     
+    # PARAM ####
+    .period.preCOVID = case_when(indicator.freq[.indicator]=="W" ~
+                              as.numeric(lubridate::isoweek(start.pandemic-7)),
+                            indicator.freq[.indicator]=="M" ~
+                              as.numeric(lubridate::month(tsibble::yearmonth(start.pandemic)-
+                                                 lubridate::month(1))),
+                            indicator.freq[.indicator]=="Q" ~
+                              as.numeric(lubridate::quarter(start.pandemic)))
+    .period.variable=period.variable[indicator.freq[.indicator]]
+    
+    
+    # AUX FUN ####
     f.axis.lab = function (x) {
       paste0({if (max(as.numeric(x)%%100,na.rm=TRUE)==4)
         paste0("Q",as.numeric(x)%%100)
@@ -171,33 +196,85 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
       if_else(as.numeric(x)%%100==1,
               paste0("\n",as.numeric(x)%/%100),""))}
     
+    # VIZ : DATA ####
     data.viz = data.CRD %>%
       filter(COUNTRY=="EU",
              INDICATOR==.indicator,
-             YEAR>=2019)
+             YEAR>=lubridate::year(start.pandemic)-1) %>%
+      {if (.indicator=="TOU")
+        left_join(.,
+              tsibble::tsibble(data.CRD %>%
+                                 filter(COUNTRY=="EU",
+                                        INDICATOR==.indicator,
+                                        YEAR>=2008 &
+                                          YEAR<lubridate::year(start.pandemic)) %>%
+                                 mutate(period=tsibble::yearmonth(paste0(YEAR,
+                                                                         " M",
+                                                                         MONTH))) %>%
+                                 select(period,
+                                        val),
+                               index=period) %>%
+                fabletools::model(decomposition_model(STL(val ~ season(window=Inf)),
+                                                      ETS(season_adjust ~ season("N")),
+                                                      SNAIVE(season_year))) %>% 
+                forecast(h="3 years") %>%
+                rename(potential=".mean") %>%
+                mutate(YEAR=format(period,
+                                   format="%Y") %>%
+                         as.numeric(),
+                       MONTH=format(period,
+                                    format="%m") %>%
+                         as.numeric()) %>%
+                tibble() %>%
+                select(YEAR,
+                       MONTH,
+                       potential))
+    else .}
     data.viz = data.viz %>%
-      mutate(ref=subset(.,
-                        YEAR==2020 &
-                          pmax(QUARTER,MONTH,WEEK)==1,
+      mutate(period=factor(100*YEAR+
+                            case_when(freq=="Q"~QUARTER,
+                                      freq=="M"~MONTH,
+                                      freq=="W"~WEEK,
+                                      TRUE~0)),
+             covid=100*lubridate::year(start.pandemic)+
+               case_when(freq=="Q"~as.numeric(lubridate::quarter(start.pandemic)),
+                         freq=="M"~as.numeric(lubridate::month(start.pandemic)),
+                         freq=="W"~as.numeric(lubridate::week(start.pandemic))),
+             ref={if (.indicator=="TOU") .$potential
+               else subset(.,
+                        YEAR==lubridate::year(start.pandemic) &
+                          !!sym(.period.variable)==.period.preCOVID,
                         select=val) %>%
-               unlist(),
-             val.index=ifelse(100*YEAR+pmax(QUARTER,MONTH,WEEK)>202001,
-                              100*(val/ref-1),NA),
-             t.index=ifelse(100*YEAR+pmax(QUARTER,MONTH,WEEK)>202001,
+               unlist()},
+             val.index=ifelse(100*YEAR+!!sym(.period.variable)>
+                                100*2020+.period.preCOVID,
+                              (val-ref)*{if (.indicator=="UNE") 1 else 100/ref},
+                              NA),
+             t.index=ifelse(100*YEAR+!!sym(.period.variable)>
+                                100*2020+.period.preCOVID,
                             paste0(ifelse(val.index<0 |
                                             (val.index>0 &
                                                INDICATOR=="UNE"),
                                           "<span style=\'color:red\'>",""),
-                                   sprintf("%+.1f%%",val.index),
+                                   sprintf({if (.indicator=="UNE") "%+.1f"
+                                             else "%+.1f%%"},
+                                           val.index),
                                    ifelse(val.index<0 |
                                             (val.index>0 &
                                                INDICATOR=="UNE"),
                                           "</span>",""),
-                                   " vs. ",
-                                   case_when(freq=="Q"~"Q1 ",
-                                             freq=="M"~"Jan ",
-                                             freq=="W"~"Week 1 "),
-                                   "2020"),
+                                   " vs. <span style=\'color:",
+                                   color.potential,"\'>",
+                                   {if (.indicator=="TOU") "potential"
+                                     else
+                                       paste0(case_when(freq=="Q"~
+                                               paste0("Q",.period.preCOVID),
+                                             freq=="M"~
+                                               month.abb[.period.preCOVID],
+                                             freq=="W"~
+                                               paste0("Week ",.period.preCOVID)),
+                                   " 2020")},
+                                          "</span>"),
                             ""),
              tooltip=paste0(case_when(freq=="Q"~paste0("Q",QUARTER),
                                       freq=="M"~ifelse(MONTH>0,
@@ -211,24 +288,37 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                             sprintf(if_else(max(val)>50,
                                             "%.0f","%.1f"),
                                     val),
-                            ifelse(100*YEAR+pmax(QUARTER,MONTH,WEEK)>202001,
+                            ifelse(100*YEAR+!!sym(.period.variable)>
+                                     100*2020+.period.preCOVID,
                                    {if (!INDICATOR %in% c("CPI"))
                                      paste0("<br> (",
                                             t.index,")")
                                      else ""},
+                                   ""),
+                            ifelse(period==covid,
+                                   "\n\n>>> Start of COVID-19 pandemic
+                                   \t(mid-March 2020)",
                                    "")))
     
-    
-    
     data.viz %>%
-      ggplot(aes(x=factor(100*YEAR+
-                            case_when(freq=="Q"~QUARTER,
-                                      freq=="M"~MONTH,
-                                      freq=="W"~WEEK,
-                                      TRUE~0)),
+      ggplot(aes(x=period,
                  y=val,
                  group=1)) +
       geom_line() +
+      {if (.indicator=="TOU")
+        geom_line(aes(y=potential),
+                  color=color.potential)} +
+      {if (.indicator !="TOU")
+        geom_hline(yintercept={if (.indicator=="CPI") 2
+                                   else data.viz %>%
+                                   filter(YEAR==lubridate::year(start.pandemic),
+                                          !!sym(.period.variable)==.period.preCOVID) %>%
+                                   pull(val)},
+                  color=color.potential)} +
+      ggimage::geom_image(data=data.viz %>%
+                            filter(period==covid),
+                          image="../MIX/COVID19.png",
+                          size=0.17) +
       geom_point_interactive(aes(tooltip=tooltip,
                                  data_id=paste0(YEAR,"Q",
                                                 case_when(freq=="Q"~QUARTER,
@@ -302,7 +392,13 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                                  "EU27 <img src='",
                                  "../MIX/[logo] EU.jpg'",
                                  " height='27' />"),
-                    theme=theme(title=element_markdown(size=26)))
+                    caption=paste0("Data extraction : ",
+                                   format(Sys.Date(),
+                                          "%d %b %Y")),
+                    theme=theme(title=element_markdown(size=26),
+                                plot.caption=element_text(size=9,
+                                                          face="italic",
+                                                          hjust=0)))
 
   girafe(ggobj=viz.CRD,
          options=list(opts_tooltip(css="font-size:13px;font-family:Calibri;background-color:white;color:#273749;;padding:9px;border-radius:4px"),
@@ -316,8 +412,8 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                                      only_shiny=FALSE,
                                      selected=character(0))),
          fonts=list(sans="Calibri"),
-         width_svg=13,
-         height_svg=6)
+         width_svg=17,
+         height_svg=7.7)
 
 ```
 
