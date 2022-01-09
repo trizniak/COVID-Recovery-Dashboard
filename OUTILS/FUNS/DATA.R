@@ -81,6 +81,7 @@ data.CRD = bind_rows(
     mutate(COUNTRY=ifelse(COUNTRY=="EU/EEA (total)","EU",
                           names(country.list)[grep(COUNTRY,country.list,
                                                    fixed=TRUE)])) %>%
+    filter(!(COUNTRY=="EU" & is.na(val))) %>%
     select(all_of(select.vars)),
   F.data.estat("ei_bssi_m_r2") %>%
     filter(indic=="BS-ESI-I",
