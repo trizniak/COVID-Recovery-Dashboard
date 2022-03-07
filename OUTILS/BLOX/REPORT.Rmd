@@ -252,14 +252,16 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                               NA),
              t.index=ifelse(100*YEAR+!!sym(.period.variable)>
                                 100*2020+.period.preCOVID,
-                            paste0(ifelse(val.index<0 |
+                            paste0(ifelse((val.index<0 &
+                                               INDICATOR !="UNE") |
                                             (val.index>0 &
                                                INDICATOR=="UNE"),
                                           "<span style=\'color:red\'>",""),
                                    sprintf({if (.indicator=="UNE") "%+.1f"
                                              else "%+.1f%%"},
                                            val.index),
-                                   ifelse(val.index<0 |
+                                   ifelse((val.index<0 &
+                                               INDICATOR !="UNE") |
                                             (val.index>0 &
                                                INDICATOR=="UNE"),
                                           "</span>",""),
@@ -361,9 +363,12 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                                               TRUE~""),
                                     " ",YEAR,
                                     " : ",
-                                    sprintf(if_else(max(val)>50,
-                                                    "%.0f","%.1f"),
-                                            val),
+                                    ifelse(INDICATOR=="TOU",
+                                           prettyNum(round(val,-2),
+                                                     big.mark=" "),
+                                           sprintf(if_else(max(val)>50,
+                                                           "%.0f","%.1f"),
+                                                   val)),
                                     {if (.indicator !="CPI")
                                       paste0(" (",t.index,")")
                                       else ""})) %>%
