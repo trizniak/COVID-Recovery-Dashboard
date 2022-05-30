@@ -89,68 +89,6 @@ my.theme = function () {
 theme_set(my.theme())
 
 
-# ---- Color Palette : OBS, EST, FXT ----
-palette.FOE=c("orangered",
-              "royalblue4",
-              "darkkhaki")
-# scales::show_col(palette.FOE)
-names(palette.FOE)=c("FXT",
-                     "OBS",
-                     "EST")
-
-
-# ---- Color Palette : Age groups ----
-# 6 groups
-palette.Age6G=c("royalblue4",
-                "brown4",
-                "darkorange",
-                "gold",
-                "tan",
-                "khaki4",
-                "darkgreen")
-# scales::show_col(palette.Age6G)
-names(palette.Age6G)=c("ALL",
-                       "<18",
-                       "18-24",
-                       "25-34",
-                       "35-54",
-                       "55-64",
-                       "65+")
-# 5 groups
-palette.Age5G=c("royalblue4",
-                "brown4",
-                "darkorange",
-                "tan",
-                "khaki4",
-                "darkgreen")
-# scales::show_col(palette.Age5G)
-names(palette.Age5G)=c("TOTAL",
-                       "<16",
-                       "16-24",
-                       "25-49",
-                       "50-64",
-                       "65+")
-# 4 groups
-palette.Age4G=c("royalblue4",
-                "brown4",
-                "darkorange",
-                "khaki4",
-                "darkgreen")
-# scales::show_col(palette.Age4G)
-names(palette.Age4G)=c("ALL",
-                       "<18",
-                       "18-34",
-                       "35-64",
-                       "65+")
-
-# ---- Color Palette : Clusters ----
-palette.clu = c("firebrick",
-                "mediumorchid4",
-                "forestgreen",
-                "darkblue")
-# scales::show_col(palette.clu)
-
-
 # ---- FUNCTION : Label Color ----
 f.label.color = function (x,
                           color=TRUE,
@@ -183,7 +121,8 @@ f.pretty.round=function (x) {
 # ---- EU MS : Protocol Order ----
 EU.PO = read_delim(here("OUTILS","REF","EU.PO.txt"),"\t",
                    escape_double=FALSE,
-                   trim_ws=TRUE) %>%
+                   trim_ws=TRUE,
+                   show_col_types=FALSE) %>%
         as.data.frame() %>%
         filter(COUNTRY!="UK")
 
