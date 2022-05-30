@@ -208,9 +208,8 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                                         INDICATOR==.indicator,
                                         YEAR>=2008 &
                                           YEAR<lubridate::year(start.pandemic)) %>%
-                                 mutate(period=tsibble::yearmonth(paste0(YEAR,
-                                                                         " M",
-                                                                         MONTH))) %>%
+                                 mutate(period=tsibble::make_yearmonth(year=YEAR,
+                                                                       month=MONTH)) %>%
                                  select(period,
                                         val),
                                index=period) %>%
