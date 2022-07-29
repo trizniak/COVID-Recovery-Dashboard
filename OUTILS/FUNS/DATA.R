@@ -67,6 +67,16 @@ data.CRD = bind_rows(
              sep="([[:punct:]])",
              convert=TRUE) %>%
     select(-c(continent,source)) %>%
+    filter(COUNTRY %in% eu_countries$name[str_which(eu_countries$code,
+                                                    "UK",
+                                                    negate=TRUE)]) %>%
+    bind_rows(eval(.) %>%
+                group_by(YEAR,
+                         WEEK,
+                         indicator) %>%
+                summarize(weekly_count=sum(weekly_count)) %>%
+                mutate(COUNTRY="EU/EEA (total)",
+                       country_code="EU")) %>%
     mutate(dataset="https://opendata.ecdc.europa.eu/covid19/nationalcasedeath/csv",
            section="COVID",
            QUARTER=0,
