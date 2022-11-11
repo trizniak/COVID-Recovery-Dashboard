@@ -307,8 +307,9 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                  group=1)) +
       geom_line() +
       {if (.indicator=="TOU")
-        geom_line(aes(y=potential),
-                  color=color.potential)} +
+        geom_step(aes(y=potential),
+                  color=color.potential,
+                  direction="mid")} +
       {if (.indicator !="TOU")
         geom_hline(yintercept={if (.indicator=="CPI") 2
                                    else data.viz %>%
