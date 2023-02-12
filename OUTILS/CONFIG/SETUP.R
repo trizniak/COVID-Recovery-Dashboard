@@ -28,8 +28,8 @@ pacman::p_load(
         # glue,		#[OUTILS]	https://cran.r-project.org/web/packages/glue/index.html
         rvest,        	#[OUTILS]	https://cran.r-project.org/web/packages/rvest/index.html
         janitor,	#[OUTILS]	https://cran.r-project.org/web/packages/janitor/index.html
-        # DT,		#[TAB]		https://cran.r-project.org/web/packages/DT/index.html
-        # kableExtra,	#[TAB]		https://cran.r-project.org/web/packages/kableExtra/index.html
+        DT,		#[TAB]		https://cran.r-project.org/web/packages/DT/index.html
+        kableExtra,	#[TAB]		https://cran.r-project.org/web/packages/kableExtra/index.html
         # reactable,	#[TAB]		https://cran.r-project.org/web/packages/reactable/index.html
         # dtwclust,	#[TIME SERIES]	https://cran.r-project.org/web/packages/dtwclust/index.html
         fable,        	#[TIME SERIES]	https://cran.r-project.org/web/packages/fable/index.html
