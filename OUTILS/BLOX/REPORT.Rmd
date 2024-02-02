@@ -11,6 +11,7 @@ mainfont: Calibri
 
 <!-- STYLE -->
 
+```{=html}
 <style>
 
 .main-container {
@@ -41,7 +42,7 @@ a, a:hover {
 table.display td { white-space: nowrap; }
 
 </style>
-
+```
 ```{r SETUP, message=FALSE, warning=FALSE, include=FALSE}
 
 knitr::opts_chunk$set(dpi=69,
@@ -51,6 +52,7 @@ knitr::opts_chunk$set(dpi=69,
                       echo=FALSE)
 
 ```
+
 <!-- ------------- END LAYOUT SETUP ------------- -->
 
 ```{r VIZ, echo=FALSE, message=FALSE, warning=FALSE}
@@ -222,7 +224,7 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                 fabletools::model(decomposition_model(STL(val ~ season(window=Inf)),
                                                       ETS(season_adjust ~ season("N")),
                                                       SNAIVE(season_year))) %>% 
-                forecast(h="3 years") %>%
+                forecast(h="4 years") %>%
                 rename(potential=".mean") %>%
                 mutate(YEAR=format(period,
                                    format="%Y") %>%
@@ -246,11 +248,12 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                          freq=="M"~as.numeric(lubridate::month(start.pandemic)),
                          freq=="W"~as.numeric(lubridate::week(start.pandemic))),
              ref={if (.indicator=="TOU") .$potential
-               else subset(.,
-                        YEAR==lubridate::year(start.pandemic) &
-                          !!sym(.period.variable)==.period.preCOVID,
-                        select=val) %>%
-               unlist()},
+               else data.viz %>%
+                 filter(.,
+                        YEAR==lubridate::year(start.pandemic),
+                        !!sym(.period.variable)==.period.preCOVID) %>%
+                 select(val) %>%
+                 unlist()},
              val.index=ifelse(100*YEAR+!!sym(.period.variable)>
                                 100*2020+.period.preCOVID,
                               (val-ref)*{if (.indicator=="UNE") 1 else 100/ref},
@@ -297,10 +300,10 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
                                     val),
                             ifelse(100*YEAR+!!sym(.period.variable)>
                                      100*2020+.period.preCOVID,
-                                   {if (!INDICATOR %in% c("CPI"))
-                                     paste0("<br> (",
-                                            t.index,")")
-                                     else ""},
+                                   ifelse(!INDICATOR %in% c("CPI"),
+                                          paste0("<br> (",
+                                            t.index,")"),
+                                          ""),
                                    ""),
                             ifelse(period==covid,
                                    "\n\n>>> Start of COVID-19 pandemic
@@ -429,7 +432,9 @@ A steadily increasing pattern of inflation in the euro area could be a good indi
 ```
 
 <p>
-****
+
+------------------------------------------------------------------------
+
 <p>
 
 ```{r Data sources, echo=FALSE, message=FALSE, warning=FALSE}
@@ -453,10 +458,12 @@ data.CRD %>%
 ```
 
 <p>
-****
+
+------------------------------------------------------------------------
+
 <p>
 
-<div style = "width:69%; height:auto; margin: auto;">
+::: {style="width:69%; height:auto; margin: auto;"}
 ```{r Data file, echo=FALSE, message=FALSE, warning=FALSE}
 
 data.tab = data.CRD %>%
@@ -535,4 +542,4 @@ DT::datatable(data.tab,
               escape=FALSE)
 
 ```
-</div>
+:::
